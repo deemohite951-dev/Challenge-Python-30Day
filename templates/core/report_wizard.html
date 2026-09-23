@@ -1,0 +1,201 @@
+{% extends 'base.html' %}
+
+{% block extra_css %}
+<style>
+    .step-indicator {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 2rem;
+        position: relative;
+    }
+    .step-pill {
+        flex: 1;
+        text-align: center;
+        padding: 10px;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 8px;
+        margin: 0 4px;
+        font-size: 0.85rem;
+        color: #64748b;
+        font-weight: 600;
+    }
+    .step-pill.active {
+        background: #06b6d4;
+        color: #0b0f19;
+    }
+    .step-pill.completed {
+        background: rgba(6, 182, 212, 0.2);
+        color: #06b6d4;
+    }
+    .wizard-step {
+        display: none;
+    }
+    .wizard-step.active {
+        display: block;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-5" style="max-width: 680px;">
+    <div class="glass-card p-4 p-md-5">
+        <h3 class="fw-bold mb-4 text-center">Report an Issue</h3>
+
+        <!-- 4 Step Pill Indicator -->
+        <div class="step-indicator">
+            <div class="step-pill active" id="pill-1">1. Details</div>
+            <div class="step-pill" id="pill-2">2. When & Where</div>
+            <div class="step-pill" id="pill-3">3. Evidence</div>
+            <div class="step-pill" id="pill-4">4. Review</div>
+        </div>
+
+        <form method="POST" enctype="multipart/form-data" id="reportForm">
+            {% csrf_token %}
+
+            <!-- STEP 1: Title, Description, Category -->
+            <div class="wizard-step active" id="step-1">
+                <h5 class="fw-bold mb-3 text-info">Step 1: Problem Details</h5>
+                <div class="mb-3">
+                    <label class="form-label">Issue Title</label>
+                    {{ form.title }}
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Problem Category</label>
+                    {{ form.category }}
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Description</label>
+                    {{ form.description }}
+                </div>
+                <div class="text-end mt-4">
+                    <button type="button" class="btn btn-info px-4" onclick="nextStep(2)">Next: Location &rarr;</button>
+                </div>
+            </div>
+
+            <!-- STEP 2: Location & Date/Time -->
+            <div class="wizard-step" id="step-2">
+                <h5 class="fw-bold mb-3 text-info">Step 2: Incident Location & Time</h5>
+                <div class="mb-3">
+                    <label class="form-label">Location / Address</label>
+                    {{ form.location }}
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Date</label>
+                        {{ form.incident_date }}
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Time</label>
+                        {{ form.incident_time }}
+                    </div>
+                </div>
+                <div class="d-flex justify-content-between mt-4">
+                    <button type="button" class="btn btn-outline-secondary" onclick="prevStep(1)">&larr; Back</button>
+                    <button type="button" class="btn btn-info px-4" onclick="nextStep(3)">Next: Photo &rarr;</button>
+                </div>
+            </div>
+
+            <!-- STEP 3: Photo with Skip Option -->
+            <div class="wizard-step" id="step-3">
+                <h5 class="fw-bold mb-3 text-info">Step 3: Attach Photo Evidence</h5>
+                <div class="mb-3">
+                    <label class="form-label">Upload Picture (Optional)</label>
+                    {{ form.photo }}
+                    <div class="form-text text-secondary">Accepted formats: JPG, PNG, WEBP.</div>
+                </div>
+                <div class="d-flex justify-content-between mt-4">
+                    <button type="button" class="btn btn-outline-secondary" onclick="prevStep(2)">&larr; Back</button>
+                    <button type="button" class="btn btn-outline-light" onclick="skipPhoto()">Skip Step &rarr;</button>
+                    <button type="button" class="btn btn-info px-4" onclick="nextStep(4)">Review &rarr;</button>
+                </div>
+            </div>
+
+            <!-- STEP 4: Review Summary -->
+            <div class="wizard-step" id="step-4">
+                <h5 class="fw-bold mb-3 text-info">Step 4: Review Information</h5>
+                <div class="bg-dark p-3 rounded mb-4 border border-secondary">
+                    <p class="mb-1"><strong class="text-secondary">Title:</strong> <span id="rev_title"></span></p>
+                    <p class="mb-1"><strong class="text-secondary">Category:</strong> <span id="rev_category"></span></p>
+                    <p class="mb-1"><strong class="text-secondary">Location:</strong> <span id="rev_location"></span></p>
+                    <p class="mb-1"><strong class="text-secondary">Date & Time:</strong> <span id="rev_datetime"></span></p>
+                    <p class="mb-1"><strong class="text-secondary">Description:</strong> <span id="rev_desc"></span></p>
+                    <p class="mb-0"><strong class="text-secondary">Photo:</strong> <span id="rev_photo">None</span></p>
+                </div>
+                <div class="d-flex justify-content-between">
+                    <button type="button" class="btn btn-outline-secondary" onclick="prevStep(3)">&larr; Back</button>
+                    <button type="submit" class="btn btn-success px-4"><i class="fa-solid fa-paper-plane me-1"></i> Submit Report</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let currentStep = 1;
+
+    function updatePills(target) {
+        for (let i = 1; i <= 4; i++) {
+            const pill = document.getElementById(`pill-${i}`);
+            if (pill) {
+                pill.classList.remove('active', 'completed');
+                if (i < target) pill.classList.add('completed');
+                if (i === target) pill.classList.add('active');
+            }
+        }
+    }
+
+    function showStep(step) {
+        document.querySelectorAll('.wizard-step').forEach(el => el.classList.remove('active'));
+        document.getElementById(`step-${step}`).classList.add('active');
+        updatePills(step);
+        currentStep = step;
+
+        if (step === 4) {
+            populateReview();
+        }
+    }
+
+    function nextStep(step) {
+        if (currentStep === 1) {
+            const title = document.getElementById('field_title').value.trim();
+            const desc = document.getElementById('field_desc').value.trim();
+            if (!title || !desc) {
+                alert('Please provide both title and description.');
+                return;
+            }
+        }
+        if (currentStep === 2) {
+            const loc = document.getElementById('field_location').value.trim();
+            const date = document.getElementById('field_date').value;
+            const time = document.getElementById('field_time').value;
+            if (!loc || !date || !time) {
+                alert('Please enter location, incident date, and incident time.');
+                return;
+            }
+        }
+        showStep(step);
+    }
+
+    function prevStep(step) {
+        showStep(step);
+    }
+
+    function skipPhoto() {
+        document.getElementById('field_photo').value = "";
+        showStep(4);
+    }
+
+    function populateReview() {
+        document.getElementById('rev_title').innerText = document.getElementById('field_title').value;
+        const catSelect = document.getElementById('field_category');
+        document.getElementById('rev_category').innerText = catSelect.options[catSelect.selectedIndex]?.text || "None";
+        document.getElementById('rev_desc').innerText = document.getElementById('field_desc').value;
+        document.getElementById('rev_location').innerText = document.getElementById('field_location').value;
+        document.getElementById('rev_datetime').innerText = `${document.getElementById('field_date').value} at ${document.getElementById('field_time').value}`;
+        const photoField = document.getElementById('field_photo');
+        document.getElementById('rev_photo').innerText = photoField.files.length > 0 ? photoField.files[0].name : "Skipped";
+    }
+</script>
+{% endblock %}

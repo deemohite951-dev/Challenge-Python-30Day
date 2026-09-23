@@ -1,0 +1,108 @@
+{% extends 'base.html' %}
+
+{% block extra_css %}
+<style>
+    .hero-banner {
+        padding: 50px 0 30px;
+        background-position: center;
+        background-size: cover;
+        background-repeat: no-repeat;
+    }
+    .metric-card {
+        border-radius: 12px;
+        transition: transform 0.2s ease;
+    }
+    .metric-card:hover {
+        transform: translateY(-4px);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Dynamic Hero Section (Crash-proof check) -->
+{% if site_settings and site_settings.homepage_bg %}
+<div class="hero-banner" style="background-image: linear-gradient(to bottom, rgba(11, 15, 25, 0.75), #0b0f19), url('{{ site_settings.homepage_bg.url }}');">
+{% else %}
+<div class="hero-banner" style="background-image: radial-gradient(circle at 50% 0%, #1e1b4b 0%, #0b0f19 80%);">
+{% endif %}
+    <div class="container text-center mb-4">
+        <h1 class="display-6 fw-bold">Community Issue Dashboard</h1>
+        <p class="text-secondary">Real-time tracker for reports, progress, and resolutions.</p>
+    </div>
+
+    <!-- 4 Stats Boxes -->
+    <div class="container">
+        <div class="row g-3">
+            <div class="col-6 col-md-3">
+                <div class="glass-card metric-card p-4 text-center border-start border-4 border-primary">
+                    <span class="text-uppercase text-secondary small fw-semibold">Total Reports</span>
+                    <h2 class="display-5 fw-bold text-white mt-2">{{ total }}</h2>
+                    <i class="fa-solid fa-layer-group text-primary fs-5"></i>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="glass-card metric-card p-4 text-center border-start border-4 border-warning">
+                    <span class="text-uppercase text-secondary small fw-semibold">Open</span>
+                    <h2 class="display-5 fw-bold text-warning mt-2">{{ open }}</h2>
+                    <i class="fa-solid fa-clock text-warning fs-5"></i>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="glass-card metric-card p-4 text-center border-start border-4 border-info">
+                    <span class="text-uppercase text-secondary small fw-semibold">In Progress</span>
+                    <h2 class="display-5 fw-bold text-info mt-2">{{ in_progress }}</h2>
+                    <i class="fa-solid fa-spinner fa-spin-pulse text-info fs-5"></i>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="glass-card metric-card p-4 text-center border-start border-4 border-success">
+                    <span class="text-uppercase text-secondary small fw-semibold">Resolved</span>
+                    <h2 class="display-5 fw-bold text-success mt-2">{{ resolved }}</h2>
+                    <i class="fa-solid fa-circle-check text-success fs-5"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Reports Preview -->
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="fw-bold mb-0">Recent Issues</h4>
+        <a href="{% url 'feed' %}" class="btn btn-sm btn-outline-info">View All Feed &rarr;</a>
+    </div>
+
+    <div class="row g-4">
+        {% for issue in recent_issues %}
+        <div class="col-md-4">
+            <div class="glass-card h-100 p-3 d-flex flex-column">
+                {% if issue.photo %}
+                    <img src="{{ issue.photo.url }}" class="rounded mb-3" style="height: 160px; object-fit: cover; width: 100%;" alt="Issue image">
+                {% endif %}
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="badge bg-secondary">{{ issue.category.name|default:"General" }}</span>
+                    {% if issue.status == 'OPEN' %}
+                        <span class="badge bg-warning text-dark">Open</span>
+                    {% elif issue.status == 'IN_PROGRESS' %}
+                        <span class="badge bg-info">In Progress</span>
+                    {% else %}
+                        <span class="badge bg-success">Resolved</span>
+                    {% endif %}
+                </div>
+                <h5 class="fw-bold text-light">{{ issue.title }}</h5>
+                <p class="text-secondary small flex-grow-1">{{ issue.description|truncatewords:20 }}</p>
+                <div class="border-top border-dark pt-2 mt-2 text-secondary small d-flex justify-content-between">
+                    <span><i class="fa-solid fa-location-dot me-1"></i> {{ issue.location }}</span>
+                    <span>{{ issue.incident_date }}</span>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12 text-center text-secondary py-5">
+            <p>No issues reported yet. Be the first to submit a problem!</p>
+            <a href="{% url 'report_issue' %}" class="btn btn-primary btn-sm">Report an Issue</a>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
